@@ -190,7 +190,6 @@ public class QuestionListActivity extends AppCompatActivity
 
     /**
      * This method gets invoked whenever user presses save button on any question
-     *
      * @param question - The question which is to be saved locally.
      */
     @Override
