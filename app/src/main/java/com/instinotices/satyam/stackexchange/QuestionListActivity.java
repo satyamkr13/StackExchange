@@ -1,15 +1,12 @@
 package com.instinotices.satyam.stackexchange;
 
-import android.arch.lifecycle.Observer;
 import android.arch.lifecycle.ViewModelProviders;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.support.annotation.Nullable;
 import android.support.customtabs.CustomTabsIntent;
-import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
 import android.support.v4.view.GravityCompat;
@@ -23,7 +20,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -31,7 +27,6 @@ import com.instinotices.satyam.stackexchange.CustomDataTypes.Question;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.List;
 
 public class QuestionListActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener, QuestionsRecyclerViewAdapter.InteractionListener {
@@ -47,6 +42,20 @@ public class QuestionListActivity extends AppCompatActivity
     private ArrayList<String> selectedTags;
     private ProgressBar progressBar;
     private TextView noQuestionsDisplay;
+
+    /**
+     * Retrieves selected tags ArrayList from SharedPreferences stored as JSON object.
+     *
+     * @return ArrayList of selected tags
+     */
+    public static ArrayList<String> getSelectedTags(SharedPreferences sharedPreferences) {
+        // Extract ArrayList<String> from JSON string saved in sharedPreferences
+        Gson gson = new Gson();
+        String json = sharedPreferences.getString(SELECTED_TAGS, "");
+        Type type = new TypeToken<ArrayList<String>>() {
+        }.getType();
+        return gson.fromJson(json, type);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,8 +79,6 @@ public class QuestionListActivity extends AppCompatActivity
             finish();
         } else {
             // User signed in, load rest of things
-
-
             setupNavigationDrawer(toolbar);
             mRecyclerView = findViewById(R.id.questionsRecyclerView);
             mAdapter = new QuestionsRecyclerViewAdapter(new ArrayList<>(), QuestionListActivity.this);
@@ -80,17 +87,20 @@ public class QuestionListActivity extends AppCompatActivity
             progressBar = findViewById(R.id.progressBarQuestionList);
             // Initialize View Model
             questionViewModel = ViewModelProviders.of(this).get(QuestionViewModel.class);
+            // Use the first selected tag by default
             questionViewModel.setTag(selectedTags.get(0));
-            questionViewModel.getLiveData().observe(this, new Observer<List<Question>>() {
-                @Override
-                public void onChanged(@Nullable List<Question> questions) {
-                    progressBar.setVisibility(View.GONE);
-                    noQuestionsDisplay.setVisibility(View.GONE);
-                    mRecyclerView.setVisibility(View.VISIBLE);
-                    if (questions != null) mAdapter.swapData(new ArrayList<>(questions));
-                    else {
-                        noQuestionsDisplay.setVisibility(View.VISIBLE);
-                    }
+            // Add an observer to change the content of RecyclerView when LiveData changes
+            questionViewModel.getLiveData().observe(this, questions -> {
+                // Hide progressBar and "No Questions" error text view.
+                progressBar.setVisibility(View.GONE);
+                noQuestionsDisplay.setVisibility(View.GONE);
+                mRecyclerView.setVisibility(View.VISIBLE);
+                // Swap the adapter if there are some questions to display, otherwise show "No questions" message
+                if (questions != null && questions.size() > 0)
+                    mAdapter.swapData(new ArrayList<>(questions));
+                else {
+                    noQuestionsDisplay.setVisibility(View.VISIBLE);
+                    mRecyclerView.setVisibility(View.INVISIBLE);
                 }
             });
         }
@@ -98,44 +108,40 @@ public class QuestionListActivity extends AppCompatActivity
 
     private void setupNavigationDrawer(Toolbar toolbar) {
 
+        // Add listener to the drawer and to add the hamburger menu icon
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         drawer.addDrawerListener(toggle);
+        // Automatically rotate the arrow
         toggle.syncState();
 
+        // Recieve onNavigationItemSelected callbacks in this class
         NavigationView navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
         Menu menu = navigationView.getMenu();
         Menu submenu = menu.addSubMenu("Your tags");
-        // Dynamically add tags
-        int i = 0;
+        // Dynamically add tags as menu items
+        int itemId = 0;
         for (String tag : selectedTags
         ) {
-            submenu.add(0, i, i, tag);
-            i += 1;
+            // Order same as item id.
+            submenu.add(0, itemId, itemId, tag);
+            itemId += 1;
         }
+        // Re-create the navigationView to display newly added items
         navigationView.invalidate();
     }
 
     private void selectTag(String tag) {
-        // This method will automatically cause repository to modify contents of liveData.
+        // This method call will automatically cause repository to modify contents of liveData.
         questionViewModel.setTag(tag);
-    }
-
-    public static ArrayList<String> getSelectedTags(SharedPreferences sharedPreferences) {
-        // Extract ArrayList<String> from JSON string saved in sharedPreferences
-        Gson gson = new Gson();
-        String json = sharedPreferences.getString(SELECTED_TAGS, "");
-        Type type = new TypeToken<ArrayList<String>>() {
-        }.getType();
-        return gson.fromJson(json, type);
     }
 
     @Override
     public void onBackPressed() {
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        DrawerLayout drawer = findViewById(R.id.drawer_layout);
         // Close navigation drawer if open, otherwise perform normal back operation
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
@@ -154,7 +160,7 @@ public class QuestionListActivity extends AppCompatActivity
             startActivity(intent);
         } else {
             selectTag(selectedTags.get(id));
-            // Show loading animation only if internet available
+            // Show loading animation only if internet is available, because fetching data  from internet may take some time
             if (QuestionsRepository.isNetworkAvailable(this)) {
                 mRecyclerView.setVisibility(View.INVISIBLE);
                 progressBar.setVisibility(View.VISIBLE);
@@ -166,6 +172,11 @@ public class QuestionListActivity extends AppCompatActivity
         return true;
     }
 
+    /**
+     * This method gets invoked whenever user presses share button on any question
+     *
+     * @param question - The question whose link is to be shared
+     */
     @Override
     public void onShare(Question question) {
         // Share the question link as text
@@ -173,22 +184,33 @@ public class QuestionListActivity extends AppCompatActivity
         sendIntent.setAction(Intent.ACTION_SEND);
         sendIntent.putExtra(Intent.EXTRA_TEXT, question.getLink());
         sendIntent.setType("text/plain");
+        // Always ask which app to use for sharing
         startActivity(Intent.createChooser(sendIntent, "Share via"));
     }
 
+    /**
+     * This method gets invoked whenever user presses save button on any question
+     *
+     * @param question - The question which is to be saved locally.
+     */
     @Override
     public void onSaveQuestion(Question question) {
+        // Ask view model to save this question
         questionViewModel.insert(question);
+        // Notify user that question has been saved, along with an option to undo this action.
         Snackbar.make(mRecyclerView, "Question saved", Snackbar.LENGTH_SHORT)
-                .setAction("UNDO", new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        questionViewModel.delete(question);
-                    }
+                .setAction("UNDO", v -> {
+                    // Ask view model to delete this question on UNDO request
+                    questionViewModel.delete(question);
                 })
                 .show();
     }
 
+    /**
+     * This method gets invoked whenever user clicks on any question to view it.
+     * This method uses Chrome Custom Tabs as an in-app browser to display full question.
+     * @param question - The question whose details are to be shown
+     */
     @Override
     public void onOpenQuestion(Question question) {
         // Open the question in Chrome Custom Tab
