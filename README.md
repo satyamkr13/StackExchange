@@ -1,5 +1,5 @@
 # StackExchange
-This app fetches questions from StackOverflow.
+This app allows users to pick any 4 tags of their intrest and then displays questions from StackOverflow on the basis of tags selected. Users can share the questions as well as save them locally for offline use. 
 
 ## Key Technologies
 1. MVVM Architechture
