@@ -73,7 +73,8 @@ public class QuestionListActivity extends AppCompatActivity
             startActivity(intent);
             finish();
         } else if (selectedTags==null){
-            // User signed in, but tags not selected
+            // User signed in, but tags not yet selected
+            // Take the user to select tags first.
             Intent intent = new Intent(this, UserInterestActivity.class);
             startActivity(intent);
             finish();

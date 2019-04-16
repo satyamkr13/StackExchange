@@ -7,7 +7,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.webkit.WebSettings;
@@ -29,15 +28,11 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        // Setting up views
+        // Setting up views, Login window i.e. WebView is initially hidden.
         webLoginLayout = findViewById(R.id.layoutWebLogin);
         signInButton = findViewById(R.id.signInButton);
-        signInButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startWebLogin();
-            }
-        });
+        // Call startWebLogin when button clicked
+        signInButton.setOnClickListener(v -> startWebLogin());
         webView = findViewById(R.id.web_view);
         progressBar = findViewById(R.id.progressBar);
 
@@ -46,6 +41,7 @@ public class LoginActivity extends AppCompatActivity {
 
     private void startWebLogin() {
         // Build authentication URL
+        // Redirect url is the url which stackexchange redirects to when authentication finished.
         Uri.Builder builder = new Uri.Builder();
         builder.scheme("https")
                 .authority("stackoverflow.com")
@@ -56,21 +52,23 @@ public class LoginActivity extends AppCompatActivity {
                 .appendQueryParameter("redirect_uri", "https://stackexchangeapiexample.blogspot.com/finishLogin");
         String url = builder.build().toString();
 
-        // Make WebView visible and start loading url
+        // Show login window and start loading url
         webLoginLayout.setVisibility(View.VISIBLE);
         webView.loadUrl(url);
         WebSettings webSettings = webView.getSettings();
         webSettings.setJavaScriptEnabled(true);
-        // Setting a custom webview client to override loading when authentication completed
+        // Setting a custom webView client to get url change callbacks
         webView.setWebViewClient(new LoginWebViewClient());
     }
 
+    /**
+     * Launches UserIntrestActivity upon successful login after saving necassry information.
+     */
     private void onLoginSucess() {
         Intent intent = new Intent(this, UserInterestActivity.class);
-        sharedPreferences.edit().putString(QuestionListActivity.LOGIN_STATUS, QuestionListActivity.STATUS_LOGGED_IN).commit();
+        sharedPreferences.edit().putString(QuestionListActivity.LOGIN_STATUS, QuestionListActivity.STATUS_LOGGED_IN).apply();
         startActivity(intent);
         Toast.makeText(this, "Thank you for signing in", Toast.LENGTH_SHORT).show();
-        //finish();
     }
 
     @Override
@@ -92,7 +90,7 @@ public class LoginActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
             if (Uri.parse(url).getHost() != null && Uri.parse(url).getHost().equals("stackexchangeapiexample.blogspot.com")) {
-                // This is my website, so we've got some result from StackExchange Implicit Login
+                // This is redirect Url, so we've got authentication result from StackExchange Implicit Login
                 Uri uri = Uri.parse(url);
                 String accessToken = uri.getFragment();
                 onLoginSucess();
@@ -104,12 +102,14 @@ public class LoginActivity extends AppCompatActivity {
         @Override
         public void onPageFinished(WebView view, String url) {
             super.onPageFinished(view, url);
+            // Hide the progressBar when page loading finished
             progressBar.setVisibility(View.GONE);
         }
 
         @Override
         public void onPageStarted(WebView view, String url, Bitmap favicon) {
             super.onPageStarted(view, url, favicon);
+            // Show progressBar when page starts loading
             progressBar.setVisibility(View.VISIBLE);
         }
     }
