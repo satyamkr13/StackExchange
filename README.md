@@ -16,6 +16,6 @@ Download the APK file from here: https://raw.githubusercontent.com/satyamcse/Sta
 
 ## Screenshots
 
-<img src="https://raw.githubusercontent.com/satyamcse/StackExchange/master/graphics/Slide8.PNG" width="350">  <img src="https://raw.githubusercontent.com/satyamcse/StackExchange/master/graphics/Slide9.PNG" width="350"> 
+<img src="https://raw.githubusercontent.com/satyamcse/StackExchange/master/graphics/Slide8.PNG" width="350">         <img src="https://raw.githubusercontent.com/satyamcse/StackExchange/master/graphics/Slide9.PNG" width="350"> 
 
 <img src="https://raw.githubusercontent.com/satyamcse/StackExchange/master/graphics/Slide10.PNG" width="350">  <img src="https://raw.githubusercontent.com/satyamcse/StackExchange/master/graphics/Slide11.PNG" width="350">
